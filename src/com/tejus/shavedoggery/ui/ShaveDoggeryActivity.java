@@ -7,7 +7,6 @@ import java.net.UnknownHostException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
 import com.tejus.shavedoggery.R;
 import com.tejus.shavedoggery.core.Definitions;
 import com.tejus.shavedoggery.core.ShaveService;
@@ -41,7 +40,6 @@ public class ShaveDoggeryActivity extends Activity {
     int targetHeight = 240;
     final String videoFile = "/sdcard/ShaveVideo.mp4";
 
-
     /** Called when the activity is first created. */
     @Override
     public void onCreate( Bundle savedInstanceState ) {
@@ -54,17 +52,7 @@ public class ShaveDoggeryActivity extends Activity {
 
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        mCameraView = ( CameraView ) findViewById( R.id.surface_overlay );
-        SurfaceView sv = ( SurfaceView ) findViewById( R.id.surface_camera );
-        mCameraView.setupCamera( sv );
-        mCameraView.prepareMedia(targetWidth, targetHeight);
-        boolean ret = mCameraView.startRecording(videoFile);
-
-
-    }
+    
 
     private void initReceiver() {
         IntentFilter filter = new IntentFilter();
@@ -111,6 +99,8 @@ public class ShaveDoggeryActivity extends Activity {
                 this.testApi2();
                 return true;
 
+            
+
             case R.id.quit:
                 this.quit();
                 return true;
@@ -153,6 +143,14 @@ public class ShaveDoggeryActivity extends Activity {
             e.printStackTrace();
         }
     }
+
+//    private void testApi3() {
+//        mCameraView = ( CameraView ) findViewById( R.id.surface_overlay );
+//        SurfaceView sv = ( SurfaceView ) findViewById( R.id.surface_camera );
+//        mCameraView.setupCamera( sv );
+//        mCameraView.prepareMedia( targetWidth, targetHeight );
+//        boolean ret = mCameraView.startRecording( videoFile );
+//    }
 
     private InetAddress getOurIp() {
         WifiManager wifi = ( WifiManager ) this.getSystemService( Context.WIFI_SERVICE );
