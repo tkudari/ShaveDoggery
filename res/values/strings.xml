@@ -13,6 +13,10 @@
 
 	<string name="action_start">Start</string>
 	<string name="action_stop">Stop</string>
+	
+	<string name="up">Up</string>
+	<string name="home">Home</string>
+	<string name="refresh_file_list">Refresh file list</string>
 
 	<string name="msg_idle">Select video size, press Start to begin</string>
 

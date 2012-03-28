@@ -14,13 +14,20 @@ public final class R {
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int quit=0x7f060003;
-        public static final int test_api=0x7f060000;
-        public static final int test_api2=0x7f060001;
-        public static final int test_api3=0x7f060002;
+        public static final int back=0x7f060002;
+        public static final int home=0x7f060003;
+        public static final int item_name=0x7f060000;
+        public static final int item_size=0x7f060001;
+        public static final int quit=0x7f060008;
+        public static final int refresh=0x7f060004;
+        public static final int test_api=0x7f060005;
+        public static final int test_api2=0x7f060006;
+        public static final int test_api3=0x7f060007;
     }
     public static final class layout {
-        public static final int main=0x7f030000;
+        public static final int file_row=0x7f030000;
+        public static final int main=0x7f030001;
+        public static final int welcome_layout=0x7f030002;
     }
     public static final class menu {
         public static final int shave_menu=0x7f050000;
@@ -30,13 +37,16 @@ public final class R {
         public static final int action_stop=0x7f040009;
         public static final int app_name=0x7f040001;
         public static final int hello=0x7f040000;
-        public static final int msg_idle=0x7f04000a;
-        public static final int quit=0x7f04000b;
+        public static final int home=0x7f04000b;
+        public static final int msg_idle=0x7f04000d;
+        public static final int quit=0x7f04000e;
+        public static final int refresh_file_list=0x7f04000c;
         public static final int res_high=0x7f040007;
         public static final int res_low=0x7f040005;
         public static final int res_medium=0x7f040006;
         public static final int test_api=0x7f040002;
         public static final int test_api2=0x7f040003;
         public static final int test_api3=0x7f040004;
+        public static final int up=0x7f04000a;
     }
 }
