@@ -6,21 +6,34 @@ import java.util.HashMap;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.tejus.shavedoggery.R;
+import com.tejus.shavedoggery.core.Definitions;
+import com.tejus.shavedoggery.core.ShaveService;
 import com.tejus.shavedoggery.util.Logger;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ListActivity;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -32,10 +45,31 @@ public class WelcomeActivity extends ListActivity {
     ArrayList<String> mFiles = new ArrayList<String>();
     HashMap<String, String> mFileLengthMap = new HashMap<String, String>();
 
+    Button backButton, homeButton, refreshButton;
+    Context mContext;
+
+    ServiceConnection mConnection;
+    ShaveService mShaveService;
+
     @Override
     public void onCreate( Bundle args ) {
         super.onCreate( args );
+        mContext = this;
+        Definitions.OUR_USERNAME = "ashavedog";
         setContentView( R.layout.welcome_layout );
+        initShaveServiceStuff();
+
+        sendBootup();
+        refreshButton = ( Button ) findViewById( R.id.refresh );
+
+        refreshButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick( View v ) {
+                startActivity( ( new Intent().setClass( mContext, WelcomeActivity.class ).setFlags( Intent.FLAG_ACTIVITY_NEW_TASK ).putExtra( "directory_path",
+                        mCurrentDirectory ) ) );
+            }
+        } );
+
         Bundle bundle = getIntent().getExtras();
         if ( bundle != null ) {
             mCurrentDirectory = ( String ) bundle.get( "directory_path" );
@@ -44,7 +78,7 @@ public class WelcomeActivity extends ListActivity {
             mCurrentDirectory = "";
         }
         try {
-            mFiles = new SdCardLister( "" ).execute().get();
+            mFiles = new SdCardLister( mCurrentDirectory ).execute().get();
             Logger.info( "oncreate: mFiles = " + mFiles.toString() );
             MySimpleArrayAdapter adapter = new MySimpleArrayAdapter( this, mFiles );
             setListAdapter( adapter );
@@ -55,6 +89,38 @@ public class WelcomeActivity extends ListActivity {
             e.printStackTrace();
         }
 
+    }
+
+    void initShaveServiceStuff() {
+        mConnection = new ServiceConnection() {
+            @Override
+            public void onServiceDisconnected( ComponentName className ) {
+                mShaveService = null;
+            }
+
+            @Override
+            public void onServiceConnected( ComponentName name, IBinder service ) {
+                mShaveService = ( ( ShaveService.ShaveBinder ) service ).getService();
+            }
+        };
+
+        doBindService();
+        startService( new Intent().setClass( this, ShaveService.class ) );
+    }
+
+    void doBindService() {
+        bindService( new Intent( this, ShaveService.class ), mConnection, Context.BIND_AUTO_CREATE );
+    }
+
+    private void sendBootup() {
+        JSONObject data = new JSONObject();
+        try {
+            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "packet_type", "bootup" );
+            mShaveService.sendMessage( data );
+        } catch ( JSONException e ) {
+            e.printStackTrace();
+        }
     }
 
     public class MySimpleArrayAdapter extends ArrayAdapter<String> {
@@ -101,12 +167,41 @@ public class WelcomeActivity extends ListActivity {
         Logger.debug( "WelcomeActivity.onListItemClick: item clicked = " + mFiles.get( position ) );
         String filePath = mFiles.get( position ); // if it's a file, fire up the
         if ( isNotADirectory( filePath ) ) {
-            // sendRequestAlert(filePath);
+            sendRequestAlert( filePath.replace( "#", "" ) );
         } else {
             startActivity( ( new Intent().setClass( this, WelcomeActivity.class ).setFlags( Intent.FLAG_ACTIVITY_NEW_TASK ).putExtra( "directory_path",
-                    filePath ) ) );
+                    filePath.replace( "#", "" ) ) ) );
         }
 
+    }
+
+    private void sendRequestAlert( String filePath ) {
+        final EditText input = new EditText( this );
+        final String finalFilePath = filePath;
+        new AlertDialog.Builder( mContext ).setIcon( R.drawable.iconshave )
+                .setTitle( getFileNameTrivial( filePath ) )
+                .setMessage( R.string.send_question )
+                .setView( input )
+                .setPositiveButton( R.string.send, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick( DialogInterface arg0, int arg1 ) {
+                        String recipient = input.getText().toString().toLowerCase();
+                        JSONObject data = new JSONObject();
+                        try {
+                            data.put( "packet_type", "file_push_req" );
+                            data.put( "file_size", getFileSize( finalFilePath ) );
+                            data.put( "file_name", finalFilePath );
+                            data.put( "to", recipient );
+                            data.put( "username", Definitions.OUR_USERNAME );
+
+                            mShaveService.sendMessage( data );
+                        } catch ( JSONException e ) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                } );
     }
 
     private class SdCardLister extends AsyncTask<Void, Void, ArrayList<String>> {
@@ -169,58 +264,18 @@ public class WelcomeActivity extends ListActivity {
 
     }
 
-    // sets the current directory & populates mFiles & mFileLengthMap
-    private void processListing( String string ) {
-        int index = 0;
-        String word;
-        String fileList = null;
-        String[] currentDirFinder = new String[ 2 ];
-        // find the current directory:
-        StringTokenizer dirTok = new StringTokenizer( string, "$" );
-        for ( int i = 0; ( dirTok.hasMoreTokens() && i <= 1 ); i++ ) {
-            currentDirFinder[ i ] = dirTok.nextToken();
-        }
-        if ( currentDirFinder[ 0 ].length() > 0 ) {
-            fileList = currentDirFinder[ 0 ].replace( "[", "" ).replace( "]", "" );
-            // populate mFiles:
-            StringTokenizer strTok = new StringTokenizer( fileList, "," );
-            while ( strTok.hasMoreTokens() ) {
-                word = strTok.nextToken();
-
-                // populate file sizes (mFileLengthMap):
-                StringTokenizer lengthTok = new StringTokenizer( word, "^" );
-                String[] fileLengthFinder = new String[ 2 ];
-                for ( int i = 0; lengthTok.hasMoreTokens(); i++ ) {
-                    fileLengthFinder[ i ] = lengthTok.nextToken();
-                }
-                mFiles.add( word.replace( " ", "" ).replace( "[", "" ).replace( "]", "" ) );
-                Log.d( "XXXX", "file added = " + mFiles.get( index ) );
-                if ( fileLengthFinder[ 1 ] != null ) {
-                    mFileLengthMap.put( mFiles.get( index ), fileLengthFinder[ 1 ] );
-                }
-                ++index;
-            }
-        }
-        mCurrentDirectory = currentDirFinder[ 1 ];
-
-        Log.d( "XXXX", "mFiles length = " + mFiles.size() );
-        Log.d( "XXXX", "mFileLengthMap = " + mFileLengthMap.toString() );
-        Log.d( "XXXX", "mCurrentDirectory = " + mCurrentDirectory );
-
-    }
-
-    private String stripLengthOff( String filePath ) {
-        Log.d( "XXXX", "filePath in stripLengthOff = " + filePath );
-        Log.d( "XXXX", "lastindex in stripLengthOff = " + filePath.lastIndexOf( "^" ) );
-        if ( filePath.contains( "^" ) ) {
-            return filePath.substring( 0, filePath.lastIndexOf( "^" ) );
-        } else {
-            return null;
-        }
-    }
-
     private boolean isNotADirectory( String filePath ) {
         return !( filePath.trim().startsWith( "#" ) );
+    }
+
+    private long getFileSize( String filePath ) {
+        File tempFile = new File( filePath );
+        if ( tempFile.exists() ) {
+            return tempFile.length();
+        } else {
+            return -1;
+        }
+
     }
 
 }

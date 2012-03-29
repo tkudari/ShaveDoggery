@@ -12,6 +12,7 @@ public final class R {
     }
     public static final class drawable {
         public static final int ic_launcher=0x7f020000;
+        public static final int iconshave=0x7f020001;
     }
     public static final class id {
         public static final int back=0x7f060002;
@@ -39,11 +40,13 @@ public final class R {
         public static final int hello=0x7f040000;
         public static final int home=0x7f04000b;
         public static final int msg_idle=0x7f04000d;
-        public static final int quit=0x7f04000e;
+        public static final int quit=0x7f040010;
         public static final int refresh_file_list=0x7f04000c;
         public static final int res_high=0x7f040007;
         public static final int res_low=0x7f040005;
         public static final int res_medium=0x7f040006;
+        public static final int send=0x7f04000f;
+        public static final int send_question=0x7f04000e;
         public static final int test_api=0x7f040002;
         public static final int test_api2=0x7f040003;
         public static final int test_api3=0x7f040004;

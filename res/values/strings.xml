@@ -19,6 +19,9 @@
 	<string name="refresh_file_list">Refresh file list</string>
 
 	<string name="msg_idle">Select video size, press Start to begin</string>
+	<string name="send_question">Who would you like this file to?</string>
+	<string name="send">Send</string>
+	
 
 
 	<string name="quit">Quit</string>
