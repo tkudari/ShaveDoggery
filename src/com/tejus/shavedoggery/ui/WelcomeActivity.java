@@ -65,7 +65,7 @@ public class WelcomeActivity extends ListActivity {
         super.onCreate( args );
         initShaveServiceStuff();
         mContext = this;
-        Definitions.OUR_USERNAME = "ashavedog";
+        Definitions.OUR_USERNAME = "notashavedog";
         setContentView( R.layout.welcome_layout );
         initReceiver();
 

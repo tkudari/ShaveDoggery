@@ -116,17 +116,17 @@ public class ShaveService extends Service {
             JSONObject data = new JSONObject( new String( reply ) );
             String packetType = data.getString( "packet_type" );
             long incomingFileSize;
-            String incomingFileName, uploaderUsername, downloaderUsername, unknownRecipient;
-            String outgoingFilePath = Environment.getExternalStorageDirectory().toString() + "/Eagles of Death Metal - Heart On 02 Wannabe in LA.mp3";
+            String incomingFilePath, uploaderUsername, downloaderUsername, unknownRecipient;
+            String outgoingFilePath;
             if ( packetType.equals( "file_push_req" ) ) {
                 Logger.info( "recvd packet is = " + data.toString() );
                 incomingFileSize = data.getLong( "file_size" );
-                incomingFileName = data.getString( "file_name" );
+                incomingFilePath = data.getString( "file_name" );
                 uploaderUsername = data.getString( "uploader_username" );
-                Logger.info( "file_push_req recvd from = " + uploaderUsername + ", filename = " + incomingFileName );
-                replyYesToUploader( uploaderUsername );
+                Logger.info( "file_push_req recvd from = " + uploaderUsername + ", filename = " + incomingFilePath );
+                replyYesToUploader( uploaderUsername, incomingFilePath );
                 // TODO: implement UI for request.
-                new Downloader( incomingFileName, incomingFileSize, uploaderUsername ).execute();
+                new Downloader( incomingFilePath, incomingFileSize, uploaderUsername ).execute();
 
             } else if ( packetType.equals( "recipient_not_found" ) ) {
                 Logger.info( "ShaveService.dealWithReply: recipient_not_found received" );
@@ -140,6 +140,7 @@ public class ShaveService extends Service {
             else if ( packetType.equals( "file_push_req_ack" ) ) {
                 // tell the server we're gonna start uploading
                 Logger.info( "dealWithReply: all's well, file_push_req_ack received" );
+                outgoingFilePath = data.getString( "file_path" );
                 new Uploader( outgoingFilePath ).execute();
             }
 
@@ -151,12 +152,13 @@ public class ShaveService extends Service {
         }
     }
 
-    private void replyYesToUploader( String uploaderUsername ) {
+    private void replyYesToUploader( String uploaderUsername, String incomingFilePath ) {
         JSONObject data = new JSONObject();
         try {
             data.put( "packet_type", "file_push_req_ack" );
             data.put( "username", Definitions.OUR_USERNAME );
             data.put( "uploader_username", uploaderUsername );
+            data.put( "file_path", incomingFilePath );
             data.put( "to", uploaderUsername );
 
             sendMessage( data );
