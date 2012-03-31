@@ -81,7 +81,7 @@ public class ShaveService extends Service {
             e.printStackTrace();
             Logger.debug( "ShaveService.sendMessage(): Killing ourself.." );
             android.os.Process.killProcess( android.os.Process.myPid() );
-        } 
+        }
 
     }
 
@@ -95,7 +95,7 @@ public class ShaveService extends Service {
             }
             while ( true ) {
                 try {
-                    Logger.info( "gonna wait in asynctask.." );
+                    // Logger.info( "gonna wait in asynctask.." );
                     params[ 0 ].read( reply );
                 } catch ( IOException e ) {
                     e.printStackTrace();
@@ -116,7 +116,7 @@ public class ShaveService extends Service {
             JSONObject data = new JSONObject( new String( reply ) );
             String packetType = data.getString( "packet_type" );
             long incomingFileSize;
-            String incomingFileName, uploaderUsername, downloaderUsername;
+            String incomingFileName, uploaderUsername, downloaderUsername, unknownRecipient;
             String outgoingFilePath = Environment.getExternalStorageDirectory().toString() + "/Eagles of Death Metal - Heart On 02 Wannabe in LA.mp3";
             if ( packetType.equals( "file_push_req" ) ) {
                 Logger.info( "recvd packet is = " + data.toString() );
@@ -128,15 +128,26 @@ public class ShaveService extends Service {
                 // TODO: implement UI for request.
                 new Downloader( incomingFileName, incomingFileSize, uploaderUsername ).execute();
 
-            } else if ( packetType.equals( "file_push_req_ack" ) ) {
+            } else if ( packetType.equals( "recipient_not_found" ) ) {
+                Logger.info( "ShaveService.dealWithReply: recipient_not_found received" );
+                unknownRecipient = data.getString( "unknown_recipient" );
+                Intent intent = new Intent( Definitions.INTENT_RECIPIENT_NOT_FOUND );
+                intent.putExtra( "unknown_recipient", unknownRecipient );
+                this.sendBroadcast( intent );
+
+            }
+
+            else if ( packetType.equals( "file_push_req_ack" ) ) {
                 // tell the server we're gonna start uploading
                 Logger.info( "dealWithReply: all's well, file_push_req_ack received" );
-
                 new Uploader( outgoingFilePath ).execute();
             }
 
         } catch ( JSONException e ) {
             e.printStackTrace();
+        } catch ( Exception e ) {
+            e.printStackTrace();
+            Logger.error( "ShaveService.dealWithReply: other generic exception, killing ourselves" );
         }
     }
 

@@ -40,7 +40,7 @@ public final class R {
         public static final int hello=0x7f040000;
         public static final int home=0x7f04000b;
         public static final int msg_idle=0x7f04000d;
-        public static final int quit=0x7f040010;
+        public static final int quit=0x7f040011;
         public static final int refresh_file_list=0x7f04000c;
         public static final int res_high=0x7f040007;
         public static final int res_low=0x7f040005;
@@ -50,6 +50,7 @@ public final class R {
         public static final int test_api=0x7f040002;
         public static final int test_api2=0x7f040003;
         public static final int test_api3=0x7f040004;
+        public static final int unknown_recipient=0x7f040010;
         public static final int up=0x7f04000a;
     }
 }

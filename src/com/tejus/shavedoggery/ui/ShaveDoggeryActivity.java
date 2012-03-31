@@ -27,7 +27,6 @@ import android.os.IBinder;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.SurfaceView;
 
 public class ShaveDoggeryActivity extends Activity {
 

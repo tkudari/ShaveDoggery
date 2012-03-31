@@ -17,18 +17,24 @@ import com.tejus.shavedoggery.util.Logger;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ListActivity;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -36,6 +42,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class WelcomeActivity extends ListActivity {
 
@@ -50,16 +57,18 @@ public class WelcomeActivity extends ListActivity {
 
     ServiceConnection mConnection;
     ShaveService mShaveService;
+    BroadcastReceiver mShaveReceiver = new ServiceIntentReceiver();
+    Handler handler = new Handler();
 
     @Override
     public void onCreate( Bundle args ) {
         super.onCreate( args );
+        initShaveServiceStuff();
         mContext = this;
         Definitions.OUR_USERNAME = "ashavedog";
         setContentView( R.layout.welcome_layout );
-        initShaveServiceStuff();
+        initReceiver();
 
-        sendBootup();
         refreshButton = ( Button ) findViewById( R.id.refresh );
 
         refreshButton.setOnClickListener( new View.OnClickListener() {
@@ -70,6 +79,12 @@ public class WelcomeActivity extends ListActivity {
             }
         } );
 
+        handler.postDelayed( new Runnable() {
+            @Override
+            public void run() {
+                sendBootup();
+            }
+        }, 2000 );
         Bundle bundle = getIntent().getExtras();
         if ( bundle != null ) {
             mCurrentDirectory = ( String ) bundle.get( "directory_path" );
@@ -86,6 +101,57 @@ public class WelcomeActivity extends ListActivity {
         } catch ( InterruptedException e ) {
             e.printStackTrace();
         } catch ( ExecutionException e ) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu( Menu menu ) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate( R.menu.shave_menu, menu );
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected( MenuItem item ) {
+        switch ( item.getItemId() ) {
+            case R.id.test_api:
+                this.testApi();
+                return true;
+
+            default:
+                return super.onOptionsItemSelected( item );
+        }
+    }
+
+    private class ServiceIntentReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive( Context context, Intent intent ) {
+            String action = intent.getAction();
+            Logger.info( "WelcomeActivity.ServiceIntentReceiver: action received = " + action );
+            if ( action.equals( Definitions.INTENT_RECIPIENT_NOT_FOUND ) ) {
+                showRecipientNotFoundToast( intent );
+            }
+        }
+
+        private void showRecipientNotFoundToast( Intent intent ) {
+            String unknownRecipient = ( intent.getStringExtra( "unknown_recipient" ) != null ) ? intent.getStringExtra( "unknown_recipient" ) : null;
+            Toast.makeText( mContext, getResources().getString( R.string.unknown_recipient ) + " " + unknownRecipient, Toast.LENGTH_LONG ).show();
+
+        }
+
+    }
+
+    private void testApi() {
+
+        JSONObject data = new JSONObject();
+        try {
+            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "packet_type", "bootup" );
+            mShaveService.sendMessage( data );
+        } catch ( JSONException e ) {
             e.printStackTrace();
         }
 
@@ -110,6 +176,12 @@ public class WelcomeActivity extends ListActivity {
 
     void doBindService() {
         bindService( new Intent( this, ShaveService.class ), mConnection, Context.BIND_AUTO_CREATE );
+    }
+
+    private void initReceiver() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction( Definitions.INTENT_RECIPIENT_NOT_FOUND );
+        registerReceiver( mShaveReceiver, filter );
     }
 
     private void sendBootup() {
@@ -167,6 +239,7 @@ public class WelcomeActivity extends ListActivity {
         Logger.debug( "WelcomeActivity.onListItemClick: item clicked = " + mFiles.get( position ) );
         String filePath = mFiles.get( position ); // if it's a file, fire up the
         if ( isNotADirectory( filePath ) ) {
+            Logger.info( " gonna  sendRequestAlert" );
             sendRequestAlert( filePath.replace( "#", "" ) );
         } else {
             startActivity( ( new Intent().setClass( this, WelcomeActivity.class ).setFlags( Intent.FLAG_ACTIVITY_NEW_TASK ).putExtra( "directory_path",
@@ -201,7 +274,9 @@ public class WelcomeActivity extends ListActivity {
                         }
                     }
 
-                } );
+                } )
+                .create()
+                .show();
     }
 
     private class SdCardLister extends AsyncTask<Void, Void, ArrayList<String>> {

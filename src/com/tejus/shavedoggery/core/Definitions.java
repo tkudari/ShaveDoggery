@@ -10,6 +10,7 @@ public class Definitions {
     public static final int SERVER_PORT = 64000;
     public static final int SERVER_UPLOAD_PORT = 65000;
     public static final String INTENT_INCOMING_FILE_REQUEST = "com.tejus.shavedoggery.incoming_file_request";
+    public static final String INTENT_RECIPIENT_NOT_FOUND= "com.tejus.shavedoggery.recipient_not_found";
     public static final int WRITE_BUFFER_SIZE = 16384;
     public static String OUR_USERNAME;
     
