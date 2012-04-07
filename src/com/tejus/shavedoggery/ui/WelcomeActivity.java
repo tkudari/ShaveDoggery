@@ -1,6 +1,13 @@
 package com.tejus.shavedoggery.ui;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringTokenizer;
@@ -65,7 +72,7 @@ public class WelcomeActivity extends ListActivity {
         super.onCreate( args );
         initShaveServiceStuff();
         mContext = this;
-        Definitions.OUR_USERNAME = "notashavedog";
+        Definitions.OUR_USERNAME = "ashavedog";
         setContentView( R.layout.welcome_layout );
         initReceiver();
 
@@ -120,6 +127,14 @@ public class WelcomeActivity extends ListActivity {
                 this.testApi();
                 return true;
 
+            case R.id.test_api1:
+                this.testApi1();
+                return true;
+
+            case R.id.quit:
+                this.quit();
+                return true;
+
             default:
                 return super.onOptionsItemSelected( item );
         }
@@ -145,13 +160,68 @@ public class WelcomeActivity extends ListActivity {
     }
 
     private void testApi() {
-
-        JSONObject data = new JSONObject();
+        Socket testSocket;
+        FileInputStream testIStream;
+        OutputStream testOStream;
+        byte[] writeArray = new byte[ 1024 * 1024 ];
         try {
-            data.put( "username", Definitions.OUR_USERNAME );
-            data.put( "packet_type", "bootup" );
-            mShaveService.sendMessage( data );
-        } catch ( JSONException e ) {
+            testSocket = new Socket( "23.21.239.205", 60000 );
+
+            testIStream = new FileInputStream( new File( "/mnt/sdcard/Eagles of Death Metal - Peace Love Death Metal 17 Just Nineteen.mp3" ) );
+            testOStream = ( OutputStream ) testSocket.getOutputStream();
+
+            while ( testIStream.read( writeArray ) > 0 ) {
+                Logger.info( "gonna write test file chunk.." );
+                testOStream.write( writeArray );
+            }
+            testIStream.close();
+            testOStream.close();
+            testSocket.close();
+
+            Logger.debug( "test Uploader done uploading file  " );
+
+        } catch ( UnknownHostException e ) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch ( IOException e ) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        // JSONObject data = new JSONObject();
+        // try {
+        // data.put( "username", Definitions.OUR_USERNAME );
+        // data.put( "packet_type", "bootup" );
+        // mShaveService.sendMessage( data );
+        // } catch ( JSONException e ) {
+        // e.printStackTrace();
+        // }
+
+    }
+
+    void testApi1() {
+        Socket testReceiverSocket;
+        try {
+            testReceiverSocket = new Socket( Definitions.SERVER_IP, 61000 );
+            InputStream iStream = testReceiverSocket.getInputStream();
+            FileOutputStream fileStream = new FileOutputStream( Environment.getExternalStorageDirectory().toString() + "/testDownload" );
+            byte[] testReadArray = new byte[ Definitions.WRITE_BUFFER_SIZE ];
+            long testFileProgressSize = 0;
+            int size;
+
+            while ( ( size = iStream.read( testReadArray ) ) > 0 ) {
+                testFileProgressSize += size;
+                Logger.info( "TestDownloader.doInBackground(): writing chunk - " + testFileProgressSize + " B done.. " );
+                fileStream.write( testReadArray, 0, size );
+            }
+
+            testReceiverSocket.close();
+            fileStream.close();
+            iStream.close();
+
+        } catch ( UnknownHostException e ) {
+            e.printStackTrace();
+        } catch ( IOException e ) {
             e.printStackTrace();
         }
 
@@ -350,6 +420,13 @@ public class WelcomeActivity extends ListActivity {
         } else {
             return -1;
         }
+
+    }
+
+    private void quit() {
+
+        Logger.debug( "WelcomeActivity.quit(): Killing ourself.." );
+        android.os.Process.killProcess( android.os.Process.myPid() );
 
     }
 

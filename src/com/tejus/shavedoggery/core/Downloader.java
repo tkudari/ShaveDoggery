@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream.GetField;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -14,23 +15,25 @@ import org.json.JSONObject;
 import com.tejus.shavedoggery.util.Logger;
 
 import android.os.AsyncTask;
+import android.os.Environment;
 
 public class Downloader extends AsyncTask<Void, Void, Void> {
 
     String mFileName, mUploaderUsername;
-    long mFileSize;
+    long mFileSize, fileProgressSize = 0;
     Socket mSocket;
     OutputStream oStream;
     InputStream iStream;
     File downloadLocation;
     FileOutputStream fileStream;
+    int size;
     byte[] readArray = new byte[ Definitions.WRITE_BUFFER_SIZE ];
 
     public Downloader( String filePath, long fileSize, String uploaderUsername ) {
         mFileName = filePath;
         mFileSize = fileSize;
         mUploaderUsername = uploaderUsername;
-        downloadLocation = new File( filePath );
+        downloadLocation = new File( Environment.getExternalStorageDirectory().toString() + "/" + getFileNameTrivial( filePath ) );
         try {
             mSocket = new Socket( Definitions.SERVER_IP, Definitions.SERVER_UPLOAD_PORT );
             oStream = mSocket.getOutputStream();
@@ -54,9 +57,10 @@ public class Downloader extends AsyncTask<Void, Void, Void> {
     @Override
     protected Void doInBackground( Void... arg0 ) {
         try {
-            while ( iStream.read( readArray ) > 0 ) {
-                Logger.info( "Downloader.doInBackground(): writing chunk..." );
-                fileStream.write( readArray );
+            while ( ( size = iStream.read( readArray ) ) > 0 ) {
+                fileProgressSize += size;
+                Logger.info( "Downloader.doInBackground(): writing chunk - " + fileProgressSize + " B done.. " );
+                fileStream.write( readArray, 0, size );
             }
 
             mSocket.close();
@@ -72,4 +76,7 @@ public class Downloader extends AsyncTask<Void, Void, Void> {
         return null;
     }
 
+    private String getFileNameTrivial( String filePath ) {
+        return filePath.substring( filePath.lastIndexOf( "/" ) + 1 );
+    }
 }

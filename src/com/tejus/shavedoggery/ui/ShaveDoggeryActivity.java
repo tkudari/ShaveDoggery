@@ -11,6 +11,7 @@ import com.tejus.shavedoggery.R;
 import com.tejus.shavedoggery.core.Definitions;
 import com.tejus.shavedoggery.core.ShaveService;
 import com.tejus.shavedoggery.util.Logger;
+import com.tejus.shavedoggery.util.ShaveDialog;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -19,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -45,13 +47,20 @@ public class ShaveDoggeryActivity extends Activity {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.main );
         // TODO: change this, obv.
-        Definitions.OUR_USERNAME = "ashavedog";
         initShaveServiceStuff();
         // initReceiver();
+        checkUserName();
 
     }
 
-    
+    private void checkUserName() {
+        // userName.exists? nothing : get one
+        SharedPreferences settings = getSharedPreferences( Definitions.credsPrefFile, Context.MODE_PRIVATE );
+        if ( settings.getString( Definitions.prefUserName, "" ).length() < 3 ) {
+            ShaveDialog dialog = new ShaveDialog( this, getResources().getString( R.string.user_name_dialog_title ), getResources().getString(
+                    R.string.user_name_dialog_message ), getResources().getString( R.string.ok ) );
+        }
+    }
 
     private void initReceiver() {
         IntentFilter filter = new IntentFilter();
@@ -98,8 +107,6 @@ public class ShaveDoggeryActivity extends Activity {
                 this.testApi2();
                 return true;
 
-            
-
             case R.id.quit:
                 this.quit();
                 return true;
@@ -121,7 +128,7 @@ public class ShaveDoggeryActivity extends Activity {
             data.put( "file_size", 130130 );
             data.put( "file_name", Environment.getExternalStorageDirectory().toString() + "/Eagles of Death Metal - Heart On 02 Wannabe in LA.mp3" );
             data.put( "to", "ashavedog" );
-            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "username", mShaveService.getOurUserName() );
 
             mShaveService.sendMessage( data );
         } catch ( JSONException e ) {
@@ -135,7 +142,7 @@ public class ShaveDoggeryActivity extends Activity {
     private void testApi2() {
         JSONObject data = new JSONObject();
         try {
-            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "username", mShaveService.getOurUserName() );
             data.put( "packet_type", "bootup" );
             mShaveService.sendMessage( data );
         } catch ( JSONException e ) {
@@ -143,13 +150,13 @@ public class ShaveDoggeryActivity extends Activity {
         }
     }
 
-//    private void testApi3() {
-//        mCameraView = ( CameraView ) findViewById( R.id.surface_overlay );
-//        SurfaceView sv = ( SurfaceView ) findViewById( R.id.surface_camera );
-//        mCameraView.setupCamera( sv );
-//        mCameraView.prepareMedia( targetWidth, targetHeight );
-//        boolean ret = mCameraView.startRecording( videoFile );
-//    }
+    // private void testApi3() {
+    // mCameraView = ( CameraView ) findViewById( R.id.surface_overlay );
+    // SurfaceView sv = ( SurfaceView ) findViewById( R.id.surface_camera );
+    // mCameraView.setupCamera( sv );
+    // mCameraView.prepareMedia( targetWidth, targetHeight );
+    // boolean ret = mCameraView.startRecording( videoFile );
+    // }
 
     private InetAddress getOurIp() {
         WifiManager wifi = ( WifiManager ) this.getSystemService( Context.WIFI_SERVICE );

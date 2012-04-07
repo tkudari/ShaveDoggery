@@ -13,7 +13,9 @@ import org.json.JSONObject;
 import com.tejus.shavedoggery.util.Logger;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Environment;
@@ -144,11 +146,30 @@ public class ShaveService extends Service {
                 new Uploader( outgoingFilePath ).execute();
             }
 
+            else if ( packetType.equals( "status_req" ) ) {
+                // for now, reply saying 'online'
+                Logger.info( "dealWithReply: request_status received, replying - online" );
+                replyWithStatus( "online" );
+            }
+
         } catch ( JSONException e ) {
             e.printStackTrace();
         } catch ( Exception e ) {
             e.printStackTrace();
             Logger.error( "ShaveService.dealWithReply: other generic exception, killing ourselves" );
+        }
+    }
+
+    private void replyWithStatus( String status ) {
+        JSONObject data = new JSONObject();
+        try {
+            data.put( "packet_type", "status_ack" );
+            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "status", status );
+
+            sendMessage( data );
+        } catch ( JSONException e ) {
+            e.printStackTrace();
         }
     }
 
@@ -166,5 +187,10 @@ public class ShaveService extends Service {
             e.printStackTrace();
         }
 
+    }
+    
+    public String getOurUserName() {
+        SharedPreferences settings = getSharedPreferences( Definitions.credsPrefFile, Context.MODE_PRIVATE );
+        return settings.getString( Definitions.prefUserName, Definitions.defaultUserName );
     }
 }
