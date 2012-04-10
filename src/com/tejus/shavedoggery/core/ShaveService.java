@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.tejus.shavedoggery.R;
 import com.tejus.shavedoggery.util.Logger;
 
 import android.app.Service;
@@ -20,6 +21,7 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
+import android.widget.Toast;
 
 public class ShaveService extends Service {
 
@@ -27,6 +29,7 @@ public class ShaveService extends Service {
     private Socket mSocket;
     OutputStream oStream;
     InputStream iStream;
+    Context activityContext;
 
     @Override
     public IBinder onBind( Intent arg0 ) {
@@ -143,6 +146,8 @@ public class ShaveService extends Service {
                 // tell the server we're gonna start uploading
                 Logger.info( "dealWithReply: all's well, file_push_req_ack received" );
                 outgoingFilePath = data.getString( "file_path" );
+                Toast.makeText( activityContext, "Starting to upload: " + outgoingFilePath, Toast.LENGTH_LONG ).show();
+
                 new Uploader( outgoingFilePath ).execute();
             }
 
@@ -207,5 +212,9 @@ public class ShaveService extends Service {
         // TODO: for now, we're using this static field, could do away with it,
         // or improve?
         return Definitions.OUR_USERNAME;
+    }
+
+    public void takeActivityContext( Context context ) {
+        activityContext = context;
     }
 }

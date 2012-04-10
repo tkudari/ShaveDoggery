@@ -85,6 +85,11 @@ public class WelcomeActivity extends ListActivity implements OnSharedPreferenceC
         checkUserName();
 
         refreshButton = ( Button ) findViewById( R.id.refresh );
+        homeButton = ( Button ) findViewById( R.id.home );
+        backButton = ( Button ) findViewById( R.id.back );
+
+        homeButton.setVisibility( View.GONE );
+        // backButton.setVisibility( View.GONE );
 
         refreshButton.setOnClickListener( new View.OnClickListener() {
             @Override
@@ -135,6 +140,16 @@ public class WelcomeActivity extends ListActivity implements OnSharedPreferenceC
     public void onPause() {
         super.onPause();
         mPrefs.unregisterOnSharedPreferenceChangeListener( this );
+        handler.postDelayed( new Runnable() {
+            @Override
+            public void run() {
+                if ( !mShaveService.getOurUserName().equals( Definitions.defaultUserName ) ) {
+                    sendBootup();
+                    // TODO: I don't like this:
+                    mShaveService.takeActivityContext( mContext );
+                }
+            }
+        }, 2000 );
     }
 
     @Override
