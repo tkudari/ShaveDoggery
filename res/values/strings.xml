@@ -29,6 +29,8 @@
     <string name="user_name_dialog_message">Please enter a name you wish to be known by </string>
 	<string name="ok">OK </string>
     
+    <string name="select_recipient">Who would you like to send this file to? </string>
+    <string name="searching_peers_message">Checking to see who\'s online...</string>
 
 
 

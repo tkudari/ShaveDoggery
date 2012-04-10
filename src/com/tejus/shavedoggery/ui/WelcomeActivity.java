@@ -20,10 +20,12 @@ import com.tejus.shavedoggery.R;
 import com.tejus.shavedoggery.core.Definitions;
 import com.tejus.shavedoggery.core.ShaveService;
 import com.tejus.shavedoggery.util.Logger;
+import com.tejus.shavedoggery.util.ShaveDialog;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ListActivity;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -31,6 +33,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -51,7 +55,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class WelcomeActivity extends ListActivity {
+public class WelcomeActivity extends ListActivity implements OnSharedPreferenceChangeListener {
 
     String sdcardDir = Environment.getExternalStorageDirectory().toString();
     ArrayList<String> rootListing = new ArrayList<String>();
@@ -66,15 +70,19 @@ public class WelcomeActivity extends ListActivity {
     ShaveService mShaveService;
     BroadcastReceiver mShaveReceiver = new ServiceIntentReceiver();
     Handler handler = new Handler();
+    SharedPreferences mPrefs;
+    private ProgressDialog searchProgressDialog;
 
     @Override
     public void onCreate( Bundle args ) {
         super.onCreate( args );
         initShaveServiceStuff();
         mContext = this;
-        Definitions.OUR_USERNAME = "ashavedog";
         setContentView( R.layout.welcome_layout );
         initReceiver();
+        mPrefs = mContext.getSharedPreferences( Definitions.credsPrefFile, Context.MODE_PRIVATE );
+
+        checkUserName();
 
         refreshButton = ( Button ) findViewById( R.id.refresh );
 
@@ -86,12 +94,12 @@ public class WelcomeActivity extends ListActivity {
             }
         } );
 
-        handler.postDelayed( new Runnable() {
-            @Override
-            public void run() {
-                sendBootup();
-            }
-        }, 2000 );
+        // handler.postDelayed( new Runnable() {
+        // @Override
+        // public void run() {
+        // sendBootup();
+        // }
+        // }, 2000 );
         Bundle bundle = getIntent().getExtras();
         if ( bundle != null ) {
             mCurrentDirectory = ( String ) bundle.get( "directory_path" );
@@ -111,6 +119,22 @@ public class WelcomeActivity extends ListActivity {
             e.printStackTrace();
         }
 
+        searchProgressDialog = new ProgressDialog( this );
+        searchProgressDialog.setMessage( getResources().getString( R.string.searching_peers_message ) );
+        searchProgressDialog.setCancelable( false );
+
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mPrefs.registerOnSharedPreferenceChangeListener( this );
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mPrefs.unregisterOnSharedPreferenceChangeListener( this );
     }
 
     @Override
@@ -148,7 +172,55 @@ public class WelcomeActivity extends ListActivity {
             Logger.info( "WelcomeActivity.ServiceIntentReceiver: action received = " + action );
             if ( action.equals( Definitions.INTENT_RECIPIENT_NOT_FOUND ) ) {
                 showRecipientNotFoundToast( intent );
+            } else if ( action.equals( Definitions.INTENT_AVAILABLE_USERS ) ) {
+                showAvailableUsers( intent );
             }
+        }
+
+        private void showAvailableUsers( Intent intent ) {
+            ArrayList<String> listUsers = new ArrayList<String>();
+            String tempElement;
+            String list = ( intent.getStringExtra( "available_users" ) != null ) ? intent.getStringExtra( "available_users" ) : null;
+
+            Logger.debug( "recvd list = " + list );
+
+            if ( searchProgressDialog != null && searchProgressDialog.isShowing() ) {
+                searchProgressDialog.dismiss();
+            }
+
+            StringTokenizer strTok = new StringTokenizer( list, "," );
+            while ( strTok.hasMoreTokens() ) {
+                tempElement = strTok.nextToken();
+                if ( !listUsers.contains( cleanString( tempElement ) ) && !cleanString( tempElement ).equals( mShaveService.getOurUserName() ) ) {
+                    listUsers.add( cleanString( tempElement ) );
+                }
+            }
+
+            final ArrayList<String> finalList = listUsers;
+            Logger.info( "and fileToPush here = " + Definitions.fileToPush );
+
+            AlertDialog.Builder builder = new AlertDialog.Builder( mContext );
+            builder.setTitle( getFileNameTrivial( Definitions.fileToPush ) + ": " + getResources().getString( R.string.send_question ) );
+
+            Logger.debug( "charseq = " + listUsers.toArray( new CharSequence[ listUsers.size() ] ) );
+
+            builder.setItems( listUsers.toArray( new CharSequence[ listUsers.size() ] ), new DialogInterface.OnClickListener() {
+                public void onClick( DialogInterface dialog, int item ) {
+                    JSONObject data = new JSONObject();
+                    try {
+                        data.put( "packet_type", "file_push_req" );
+                        data.put( "file_size", getFileSize( Definitions.fileToPush ) );
+                        data.put( "file_name", Definitions.fileToPush );
+                        data.put( "to", finalList.get( item ) );
+                        data.put( "username", mShaveService.getOurUserName() );
+
+                        mShaveService.sendMessage( data );
+                    } catch ( JSONException e ) {
+                        e.printStackTrace();
+                    }
+                }
+            } );
+            builder.create().show();
         }
 
         private void showRecipientNotFoundToast( Intent intent ) {
@@ -227,6 +299,16 @@ public class WelcomeActivity extends ListActivity {
 
     }
 
+    private void checkUserName() {
+
+        // userName.exists? nothing : get one
+        SharedPreferences settings = getSharedPreferences( Definitions.credsPrefFile, Context.MODE_PRIVATE );
+        if ( settings.getString( Definitions.prefUserName, "" ).length() < 3 ) {
+            ShaveDialog dialog = new ShaveDialog( this, getResources().getString( R.string.user_name_dialog_title ), getResources().getString(
+                    R.string.user_name_dialog_message ), getResources().getString( R.string.ok ) );
+        }
+    }
+
     void initShaveServiceStuff() {
         mConnection = new ServiceConnection() {
             @Override
@@ -251,13 +333,14 @@ public class WelcomeActivity extends ListActivity {
     private void initReceiver() {
         IntentFilter filter = new IntentFilter();
         filter.addAction( Definitions.INTENT_RECIPIENT_NOT_FOUND );
+        filter.addAction( Definitions.INTENT_AVAILABLE_USERS );
         registerReceiver( mShaveReceiver, filter );
     }
 
     private void sendBootup() {
         JSONObject data = new JSONObject();
         try {
-            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "username", mShaveService.getOurUserName() );
             data.put( "packet_type", "bootup" );
             mShaveService.sendMessage( data );
         } catch ( JSONException e ) {
@@ -285,12 +368,15 @@ public class WelcomeActivity extends ListActivity {
             TextView itemSize = ( TextView ) rowView.findViewById( R.id.item_size );
             if ( fileList.size() > 0 ) {
                 if ( fileList.get( position ).startsWith( "#" ) ) {
-                    Logger.info( "WelcomeActivity.getView(): setting bold for position = " + position );
+                    // Logger.info(
+                    // "WelcomeActivity.getView(): setting bold for position = "
+                    // + position );
                     itemName.setTypeface( null, Typeface.BOLD );
                     itemSize.setVisibility( View.GONE );
                     name = getFileNameTrivial( fileList.get( position ) );
                 } else {
-                    Log.d( "XXXX", "setting italics for position = " + position );
+                    // Log.d( "XXXX", "setting italics for position = " +
+                    // position );
                     itemName.setTypeface( null, Typeface.ITALIC );
                     if ( mFileLengthMap.get( mFiles.get( position ) ) != null ) {
                         itemSize.setText( saneFileSizeRepresentation( mFileLengthMap.get( mFiles.get( position ) ) ) );
@@ -309,8 +395,23 @@ public class WelcomeActivity extends ListActivity {
         Logger.debug( "WelcomeActivity.onListItemClick: item clicked = " + mFiles.get( position ) );
         String filePath = mFiles.get( position ); // if it's a file, fire up the
         if ( isNotADirectory( filePath ) ) {
-            Logger.info( " gonna  sendRequestAlert" );
-            sendRequestAlert( filePath.replace( "#", "" ) );
+            Logger.info( " gonna  send receivers_status_req" );
+
+            JSONObject data = new JSONObject();
+            try {
+                data.put( "packet_type", "receivers_status_req" );
+                data.put( "username", mShaveService.getOurUserName() );
+
+                mShaveService.sendMessage( data );
+            } catch ( JSONException e ) {
+                e.printStackTrace();
+            }
+
+            // sendRequestAlert( filePath.replace( "#", "" ) );
+            Definitions.fileToPush = filePath.replace( "#", "" );
+            Logger.info( "fileToPush here = " + Definitions.fileToPush );
+            searchProgressDialog.show();
+
         } else {
             startActivity( ( new Intent().setClass( this, WelcomeActivity.class ).setFlags( Intent.FLAG_ACTIVITY_NEW_TASK ).putExtra( "directory_path",
                     filePath.replace( "#", "" ) ) ) );
@@ -336,7 +437,7 @@ public class WelcomeActivity extends ListActivity {
                             data.put( "file_size", getFileSize( finalFilePath ) );
                             data.put( "file_name", finalFilePath );
                             data.put( "to", recipient );
-                            data.put( "username", Definitions.OUR_USERNAME );
+                            data.put( "username", mShaveService.getOurUserName() );
 
                             mShaveService.sendMessage( data );
                         } catch ( JSONException e ) {
@@ -392,14 +493,16 @@ public class WelcomeActivity extends ListActivity {
     }
 
     String saneFileSizeRepresentation( String fileSize ) {
-        Log.d( "XXXX", "saneFileSizeRepresentation called for - " + fileSize );
+        // Log.d( "XXXX", "saneFileSizeRepresentation called for - " + fileSize
+        // );
         fileSize = fileSize.replace( "]", "" ).replace( "[", "" );
         if ( fileSize.length() < 4 ) {
             return fileSize + " B";
         } else if ( fileSize.length() < 7 ) {
             return String.valueOf( ( Long.parseLong( fileSize ) / 1000 ) ) + " KB";
         } else if ( fileSize.length() < 10 ) {
-            Log.d( "XXXX", "for MB: " + ( Long.parseLong( fileSize ) / 1000000 ) );
+            // Log.d( "XXXX", "for MB: " + ( Long.parseLong( fileSize ) /
+            // 1000000 ) );
             return String.valueOf( ( Long.parseLong( fileSize ) / ( long ) 1000000 ) ) + " MB";
         } else if ( fileSize.length() < 13 ) {
             return String.valueOf( ( Long.parseLong( fileSize ) / 1000000000 ) ) + " GB";
@@ -430,4 +533,15 @@ public class WelcomeActivity extends ListActivity {
 
     }
 
+    @Override
+    public void onSharedPreferenceChanged( SharedPreferences sharedPreferences, String key ) {
+
+        Logger.debug( "Username changed to = " + sharedPreferences.getString( key, Definitions.defaultUserName ) );
+        sendBootup();
+
+    }
+
+    String cleanString( String dirty ) {
+        return dirty.replace( "[", "" ).replace( "]", "" ).replace( "\"", "" );
+    }
 }

@@ -152,6 +152,11 @@ public class ShaveService extends Service {
                 replyWithStatus( "online" );
             }
 
+            else if ( packetType.equals( "receivers_status_ack" ) ) {
+                Logger.info( "dealWithReply: receivers_status_ack recvd. here's the list = " + data.getString( "users_status" ) );
+                notifyUser( data.getString( "users_status" ) );
+            }
+
         } catch ( JSONException e ) {
             e.printStackTrace();
         } catch ( Exception e ) {
@@ -160,12 +165,18 @@ public class ShaveService extends Service {
         }
     }
 
+    private void notifyUser( String availableUsers ) {
+        Intent intent = new Intent( Definitions.INTENT_AVAILABLE_USERS );
+        intent.putExtra( "available_users", availableUsers );
+        this.sendBroadcast( intent );
+    }
+
     private void replyWithStatus( String status ) {
         JSONObject data = new JSONObject();
         try {
             data.put( "packet_type", "status_ack" );
-            data.put( "username", Definitions.OUR_USERNAME );
-            data.put( "status", status );
+            data.put( "username", getOurUserName() );
+            data.put( "statuss", status );
 
             sendMessage( data );
         } catch ( JSONException e ) {
@@ -177,7 +188,7 @@ public class ShaveService extends Service {
         JSONObject data = new JSONObject();
         try {
             data.put( "packet_type", "file_push_req_ack" );
-            data.put( "username", Definitions.OUR_USERNAME );
+            data.put( "username", getOurUserName() );
             data.put( "uploader_username", uploaderUsername );
             data.put( "file_path", incomingFilePath );
             data.put( "to", uploaderUsername );
@@ -188,9 +199,13 @@ public class ShaveService extends Service {
         }
 
     }
-    
+
     public String getOurUserName() {
+
         SharedPreferences settings = getSharedPreferences( Definitions.credsPrefFile, Context.MODE_PRIVATE );
-        return settings.getString( Definitions.prefUserName, Definitions.defaultUserName );
+        Definitions.OUR_USERNAME = settings.getString( Definitions.prefUserName, Definitions.defaultUserName );
+        // TODO: for now, we're using this static field, could do away with it,
+        // or improve?
+        return Definitions.OUR_USERNAME;
     }
 }

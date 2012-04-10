@@ -42,11 +42,13 @@ public final class R {
         public static final int home=0x7f04000c;
         public static final int msg_idle=0x7f04000e;
         public static final int ok=0x7f040015;
-        public static final int quit=0x7f040016;
+        public static final int quit=0x7f040018;
         public static final int refresh_file_list=0x7f04000d;
         public static final int res_high=0x7f040008;
         public static final int res_low=0x7f040006;
         public static final int res_medium=0x7f040007;
+        public static final int searching_peers_message=0x7f040017;
+        public static final int select_recipient=0x7f040016;
         public static final int send=0x7f040010;
         public static final int send_question=0x7f04000f;
         public static final int test_api=0x7f040002;

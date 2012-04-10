@@ -77,8 +77,12 @@ net.createServer(
 					
 					//reply after 2 seconds:
 					setTimeout(function(){ 
+						var payload = {};
+						payload.packet_type = "receivers_status_ack";
+						payload.users_status = usersStatus;
 						console.log("replying with users' statuses to: " + obj.username);
-						sendMessage(obj.username, JSON.stringify(usersStatus));
+						
+						sendMessage(obj.username, JSON.stringify(payload));
 
 					}, 2000);
 				}
