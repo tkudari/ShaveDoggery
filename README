@@ -1,0 +1,12 @@
+This is a simple P2P file push mechanism for Android, that requires no configuration, other than supplying a username the first time the app is used.
+- The components in this system are - the app itself and a stream-routing / match-making server running on a static I.P.Address (I've used Node.js on an EC2 instance)
+- It features a file browser that lists the files & folders (and sizes) on the device's SDcard.
+- The user chooses which file he wants to send, by navigating to the file using the file browser in the app.
+- On clicking the filename, the device searches for other users currently using the app, who are connected to the Internet and lists them.
+- Users can be connected through any sort of a network in any location, as long as they have a valid I.P address.
+- Clicking on a username starts pushing the file through a TCP stream to that user. The receiving user (obviously) receives the file.
+- Progress is shown on the uploader and the downloader with a progress bar.
+- The speed of the file transfer depends on the networks the devices are connected to. There is no file storage anywhere else, other than on the peers involved in the transaction.
+- This is only a proof of concept, and this framework can be used for other scenarios, like a live broadcast of the device's camera feed to all users using the app, implementing a friend-based association, to choose who to send the file to, etc.
+
+  
